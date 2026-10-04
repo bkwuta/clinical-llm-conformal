@@ -1,0 +1,6 @@
+[submodule "vendor/ehr-llm-benchmark"]
+	path = vendor/ehr-llm-benchmark
+	url = https://github.com/yhzhu99/ehr-llm-benchmark.git
+[submodule "vendor/mimic_preprocessor"]
+	path = vendor/mimic_preprocessor
+	url = https://github.com/PKU-AICare/mimic_preprocessor.git
