@@ -1,0 +1,67 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# uv
+.uv/
+uv-cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets / environment
+.env
+.env.*
+!.env.example
+
+# Local model / API config
+configs/local*.yaml
+configs/private*.yaml
+
+# Data
+tmp/
+data/
+datasets/
+cache/
+artifacts/
+outputs/
+runs/
+
+# MIMIC / clinical data
+mimic/
+mimic-iv/
+mimiciv/
+*.parquet
+*.feather
+*.arrow
+
+# Logs
+*.log
+
+# Coverage / test artifacts
+.coverage
+.pytest_cache/
+htmlcov/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Temporary files
+*.tmp
+*.temp

@@ -1,0 +1,36 @@
+[project]
+name = "clinical-llm-conformal"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Bo Ki Wong", email = "bwong.nyc@gmail.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "db-dtypes>=1.7.2",
+    "numpy==2.0.2",
+    "openai>=3.24.0",
+    "pandas==2.2.3",
+    "pyarrow>=25.0.1",
+    "pydantic>=2.13.5",
+    "python-dotenv>=1.2.4",
+    "pyyaml>=6.0.3",
+    "scikit-learn>=1.9.1",
+    "tomli>=2.4.1",
+    "tqdm>=4.70.1",
+]
+
+[project.scripts]
+clinical-llm-conformal = "clinical_llm_conformal:main"
+
+[build-system]
+requires = ["uv_build>=0.12.9,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.4.0",
+    "pytest>=9.1.1",
+    "ruff>=0.16.10",
+]

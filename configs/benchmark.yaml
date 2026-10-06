@@ -1,0 +1,24 @@
+seed: 20260915
+
+data:
+  work_root: tmp/benchmark_cohort
+
+benchmark:
+  n_samples: 40
+  n_positive: 8
+  n_negative: 32
+  task: mortality
+  n_shot: 0
+  unit: true
+  reference_range: true
+  format_type: list
+  bootstrap_replicates: 100
+
+generation:
+  temperature: 0.0
+  max_tokens: 768
+  enable_thinking: false
+  reasoning_effort: none
+  top_k: 20
+  min_p: 0.0
+  max_workers: 1

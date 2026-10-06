@@ -1,0 +1,29 @@
+seed: 20260915
+
+patients:
+  - patient_id: 10032409
+    admission_id: 28020206
+
+  - patient_id: 18462246
+    admission_id: 27422931
+
+prompt:
+  task: mortality
+  n_shot: 0
+  unit: true
+  reference_range: true
+  format_type: list
+
+dbsa:
+  n_full: 4
+  n_perturbed: 4
+  n_permutations: 500
+  max_workers: 1
+
+generation:
+  temperature: 0.7
+  max_tokens: 768
+  enable_thinking: false
+  reasoning_effort: none
+  top_k: 20
+  min_p: 0.0

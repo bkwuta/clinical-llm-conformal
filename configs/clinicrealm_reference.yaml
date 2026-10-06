@@ -1,0 +1,8 @@
+seed: 42
+
+data:
+  work_root: tmp/clinicrealm_reference
+  test_ehr_path: tmp/clinicrealm_reference/processed/clinicrealm_structured_test_200.parquet
+
+reference:
+  test_size: 200
