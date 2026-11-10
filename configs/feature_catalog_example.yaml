@@ -1,0 +1,23 @@
+# Example metadata for a generic measurement preprocessor.
+# Do not treat missing reference ranges as normal/abnormal judgments.
+features:
+  Heart Rate:
+    display_name: Heart Rate
+    type: numeric
+    unit: bpm
+    reference_range: null
+  Creatinine:
+    display_name: Creatinine
+    type: numeric
+    unit: mg/dL
+    reference_range: null
+  Custom Biomarker:
+    display_name: Custom Biomarker
+    type: numeric
+    unit: ng/mL
+    reference_range: null
+  Mental Status:
+    display_name: Mental Status
+    type: categorical
+    unit: null
+    reference_range: null

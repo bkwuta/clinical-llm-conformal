@@ -22,6 +22,14 @@ LABTEST_FEATURES = [
     "pH",
 ]
 
+EXTENDED_LAB_FEATURES = [
+    "Creatinine",
+    "BUN",
+    "Lactate",
+    "WBC",
+    "Hemoglobin",
+    "Platelets",
+]
 
 def load_clinicrealm_ehr(path: str | Path) -> pd.DataFrame:
     """Load EHR data produced by the official MIMIC-IV preprocessor."""
@@ -54,7 +62,26 @@ def load_clinicrealm_ehr(path: str | Path) -> pd.DataFrame:
 
     return df
 
-def build_patient_records(ehr_df: pd.DataFrame) -> dict:
+def build_patient_records(
+    ehr_df: pd.DataFrame,
+    features: list[str] | None = None,
+) -> dict:
+    # Preserve the original ClinicRealm-17 behavior by default.
+    if features is None:
+        features = LABTEST_FEATURES
+
+    # Ensure all requested features exist in the dataset.
+    missing_features = [
+        feature
+        for feature in features
+        if feature not in ehr_df.columns
+    ]
+
+    if missing_features:
+        raise ValueError(
+            f"Missing EHR features: {missing_features}"
+        )
+
     patients = {}
 
     for (patient_id, admission_id), group in ehr_df.groupby(
@@ -71,8 +98,11 @@ def build_patient_records(ehr_df: pd.DataFrame) -> dict:
         }
 
         for day, (_, row) in zip(day_cols, group.iterrows()):
-            for feature in LABTEST_FEATURES:
-                patient[(day, feature)] = row.get(feature, float("nan"))
+            for feature in features:
+                patient[(day, feature)] = row.get(
+                    feature,
+                    float("nan"),
+                )
 
         patients[(int(patient_id), int(admission_id))] = {
             "row": pd.Series(patient),

@@ -1,0 +1,59 @@
+seed: 42
+
+data:
+  extended_ehr_path: tmp/extended_ehr/clinicrealm_structured_test_200_plus_labs.parquet
+  diagnoses_path: /data/mimiciv/extended_domains/clinicrealm_200/diagnoses.csv
+  prescriptions_path: /data/mimiciv/extended_domains/clinicrealm_200/prescriptions.csv
+
+patients:
+  - patient_id: 10032409
+    admission_id: 28020206
+
+feature_sets:
+  clinicrealm_17:
+    domains:
+      - demographics
+      - clinicrealm_17
+
+  clinicrealm_23:
+    domains:
+      - demographics
+      - clinicrealm_17
+      - labs
+
+  plus_diagnoses:
+    domains:
+      - demographics
+      - clinicrealm_17
+      - labs
+      - diagnoses
+
+  full_clinical:
+    domains:
+      - demographics
+      - clinicrealm_17
+      - labs
+      - diagnoses
+      - medications
+
+prompt:
+  task: mortality
+  n_shot: 0
+  unit: true
+  reference_range: true
+  format_type: list
+  max_medications: 20
+
+experiment:
+  # These outputs are for testing the integration.
+  # Admission diagnoses and prescription timestamps
+  # have not been validated for prediction-time availability.
+  allow_unverified_events: true
+
+generation:
+  temperature: 0.0
+  max_tokens: 2048
+  enable_thinking: false
+  reasoning_effort: none
+  top_k: 20
+  min_p: 0.0

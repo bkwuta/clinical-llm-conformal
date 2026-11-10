@@ -55,9 +55,42 @@ CHUNK_DEFINITIONS = {
     "Height": [
         "Height",
     ],
+    # Extended MIMIC-IV laboratory chunks.
+    "Renal": [
+        "Creatinine",
+        "BUN",
+    ],
+
+    "Hematology": [
+        "WBC",
+        "Hemoglobin",
+        "Platelets",
+    ],
+
+    "Lactate": [
+        "Lactate",
+    ],
 }
 
 CHUNK_NAMES = list(CHUNK_DEFINITIONS)
+
+# Additional MIMIC-IV laboratory features.
+# These supplement, but do not modify, ClinicRealm's original metadata.
+EXTENDED_LAB_UNITS = {
+    "Creatinine": "mg/dL",
+    "BUN": "mg/dL",
+    "Lactate": "mmol/L",
+    "WBC": "10^3/uL",
+    "Hemoglobin": "g/dL",
+    "Platelets": "10^3/uL",
+}
+
+# "/" means no reference range is supplied.
+# Do not invent reference ranges for this initial experiment.
+EXTENDED_LAB_RANGES = {
+    feature: "/"
+    for feature in EXTENDED_LAB_UNITS
+}
 
 
 def _extract_assignment_literal(source: str, name: str):
@@ -79,6 +112,14 @@ def load_prompt_assets() -> dict:
     unit_path = PROMPT_DIR / "mimic-iv" / "unit.json"
     range_path = PROMPT_DIR / "mimic-iv" / "range.json"
 
+     # Load original ClinicRealm metadata.
+    units = json.loads(unit_path.read_text())
+    reference_ranges = json.loads(range_path.read_text())
+
+    # Add metadata for the six new laboratory variables.
+    units.update(EXTENDED_LAB_UNITS)
+    reference_ranges.update(EXTENDED_LAB_RANGES)
+
     return {
         "SYSTEMPROMPT": _extract_assignment_literal(
             source, "SYSTEMPROMPT"
@@ -95,8 +136,8 @@ def load_prompt_assets() -> dict:
         "USERPROMPT": _extract_assignment_literal(
             source, "USERPROMPT"
         ),
-        "UNIT": json.loads(unit_path.read_text()),
-        "REFERENCE_RANGE": json.loads(range_path.read_text()),
+        "UNIT": units,
+        "REFERENCE_RANGE": reference_ranges,
     }
 
 
@@ -286,18 +327,24 @@ def build_clinicrealm_prompt(
         )
 
     if retained_chunks is None:
-        retained_chunks = CHUNK_NAMES
-        
-    keep = set(retained_chunks)
-    
-    selected_features = []
-    
-    for chunk, chunk_features in CHUNK_DEFINITIONS.items():
-        if chunk == "Demographics":
-            continue
-        
-        if chunk in keep:
-            selected_features.extend(chunk_features)
+        # No DBSA perturbation: use exactly the requested features.
+        selected_features = list(features)
+    else:
+        # DBSA perturbation: retain only features belonging
+        # to the specified clinical chunks.
+        keep = set(retained_chunks)
+
+        selected_features = [
+            feature
+            for feature in features
+            if any(
+                chunk_name in keep
+                and feature in chunk_features
+                for chunk_name, chunk_features
+                in CHUNK_DEFINITIONS.items()
+                if chunk_name != "Demographics"
+            )
+    ]
 
     system_prompt = assets["SYSTEMPROMPT"][dataset].strip()
 
@@ -335,12 +382,13 @@ def build_clinicrealm_prompt(
         format_type=format_type,
     )
 
-    if "Demographics" in keep:
+    if retained_chunks is None or "Demographics" in retained_chunks:
         sex = _normalise_sex(patient_row["Sex"])
         age = patient_row["Age"]
     else:
         sex = "unknown"
         age = "unknown"
+
     length = len(day_cols)
 
     user_prompt = assets["USERPROMPT"].format(

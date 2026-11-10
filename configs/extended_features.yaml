@@ -1,0 +1,18 @@
+features:
+  Creatinine:
+    unit: mg/dL
+
+  BUN:
+    unit: mg/dL
+
+  Lactate:
+    unit: mmol/L
+
+  WBC:
+    unit: 10^3/uL
+
+  Hemoglobin:
+    unit: g/dL
+
+  Platelets:
+    unit: 10^3/uL

@@ -1,0 +1,25 @@
+# Benchmark-compatible reference path; no retrospective ICD/prescription features.
+cohort:
+  path: /data/mimiciv/cohorts/clinicrealm_200.parquet
+measurements:
+  provider: clinicrealm
+  path: tmp/extended_ehr/clinicrealm_structured_test_200_plus_labs.parquet
+feature_sets:
+  clinicrealm_17:
+    domains: [demographics, clinicrealm_17]
+  clinicrealm_23:
+    domains: [demographics, clinicrealm_17, labs]
+prompt:
+  provider: clinicrealm
+  task: mortality
+  n_shot: 0
+  unit: true
+  reference_range: true
+  format_type: list
+generation:
+  temperature: 0.0
+  max_tokens: 2048
+  enable_thinking: false
+  reasoning_effort: none
+  top_k: 20
+  min_p: 0.0

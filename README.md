@@ -379,3 +379,194 @@ Avoid:
 > exact ClinicRealm MIMIC-IV test set
 
 until note-restricted cohort reconstruction is available.
+
+## Configurable Clinical Data Pipeline
+
+This project extends the ClinicRealm clinical-LLM mortality prediction workflow with configurable patient cohorts, longitudinal clinical measurements, additional EHR domains, and DBSA-based sensitivity analysis.
+
+The original ClinicRealm preprocessing and prompt templates are preserved for benchmark compatibility.
+
+### Architecture
+
+```text
+MIMIC-IV
+   |
+   v
+Cohort Selection
+   |-- ClinicRealm preprocessing
+   |-- Custom preprocessing
+   |-- Imported CSV/Parquet cohort
+   |
+   v
+Standardized Cohort Manifest
+   |
+   +-- Clinical Measurements
+   |      |-- ClinicRealm adapter
+   |      +-- Generic longitudinal adapter
+   |
+   +-- Diagnoses
+   |
+   +-- Medication Prescriptions
+   |
+   v
+Clinical Record Representation
+   |
+   +-- ClinicRealm-compatible prompts
+   +-- Generic feature-catalog prompts
+   |
+   v
+Clinical LLM
+   |
+   +-- Mortality prediction
+   +-- DBSA sensitivity analysis
+   +-- Conformal evaluation (separate workflow)
+```
+
+### Cohort Selection
+
+Cohort selection is independent of clinical data extraction.
+
+The standardized cohort manifest contains:
+
+- `subject_id`: MIMIC-IV patient identifier
+- `hadm_id`: Hospital admission identifier
+- `label`: Outcome label, when available
+
+Alternative preprocessing pipelines can generate compatible manifests without modifying the downstream clinical-data code.
+
+The current reference cohort contains 200 hospital admissions from 199 unique patients.
+
+### Clinical Information
+
+The extended clinical representation supports:
+
+| Domain | Information |
+|---|---|
+| Demographics | Age and sex |
+| Vital signs | Heart rate, blood pressure, respiratory rate, oxygen saturation, temperature, and related measurements |
+| Original ClinicRealm features | 17 structured EHR variables |
+| Additional laboratories | Creatinine, BUN, lactate, WBC, hemoglobin, platelets |
+| Diagnoses | ICD codes and descriptions |
+| Medications | Prescription drug names, doses, routes, and timestamps |
+
+Diagnosis and medication records are stored separately from longitudinal measurements.
+
+The clinical prompt builder supports configurable inclusion of these domains.
+
+### Reference Dataset
+
+The current MIMIC-IV 3.1 reference cohort contains:
+
+| Data | Records / Coverage |
+|---|---|
+| Hospital admissions | 200 |
+| Unique patients | 199 |
+| Diagnosis records | 3,539 |
+| Prescription records | 19,108 |
+| Admissions with diagnoses | 200/200 |
+| Admissions with prescriptions | 200/200 |
+
+Raw MIMIC data, extracted patient records, and private BigQuery utilities are not included in this repository.
+
+### Preprocessing Independence
+
+Two measurement-processing paths are supported.
+
+**ClinicRealm reference path**
+
+Preserves the original longitudinal EHR representation and ClinicRealm prompt formatting.
+
+**Generic clinical path**
+
+Accepts timestamped longitudinal measurements and configurable feature metadata.
+
+The generic measurement format includes:
+
+- Patient and admission identifiers
+- Observation timestamp
+- Clinical feature name
+- Measurement value
+- Optional measurement unit
+
+Feature metadata, including display names and reference ranges, can be defined through YAML configuration.
+
+### Experiment Runners
+
+**Clinical-domain experiments**
+
+```bash
+uv run python scripts/run_clinical_domains.py
+```
+
+Run Qwen inference:
+
+```bash
+uv run python scripts/run_clinical_domains.py --infer
+```
+
+**Configuration-driven experiments**
+
+```bash
+uv run python scripts/run_configured_clinical.py \
+  --config configs/clinicrealm_configured.yaml \
+  --limit 2
+```
+
+**Single-admission DBSA integration**
+
+```bash
+uv run python scripts/run_single_dbsa_clinical.py
+```
+
+The DBSA integration includes 15 perturbation chunks, including diagnoses and medications.
+
+### Verified Integration
+
+The following checks have passed:
+
+- Standardized cohort manifest generation
+- Cohort-driven diagnosis and prescription extraction
+- Generic longitudinal measurement adapter
+- ClinicRealm measurement compatibility across 200 admissions
+- Generic feature catalog and clinical prompt generation
+- Configuration-driven experiment runner
+- Original ClinicRealm prompt compatibility
+- Local Qwen mortality inference with expanded clinical domains
+- Single-admission DBSA integration with 15 clinical chunks
+
+These checks establish software integration, not clinical predictive validity.
+
+### Methodological Limitations
+
+**Prediction-time availability**
+
+Admission-associated ICD diagnoses and prescription records have not been verified as available at the mortality prediction cutoff.
+
+These domains are therefore restricted to exploratory retrospective analysis.
+
+**Temporal alignment**
+
+The additional laboratory measurements and longitudinal preprocessing require temporal validation before use in prospective mortality prediction studies.
+
+**Medication interpretation**
+
+Prescription orders are not equivalent to confirmed medication administrations.
+
+The current prompt representation may truncate medication lists and should not be considered a comprehensive medication history.
+
+**DBSA interpretation**
+
+The single-admission DBSA run uses reduced sampling settings for integration verification. Its rankings and p-values should not be interpreted as statistically validated clinical feature importance.
+
+### Data Privacy
+
+MIMIC-IV patient-level datasets and private extraction utilities must remain outside public version control.
+
+Local configuration files containing credentials, authentication information, or private infrastructure details must not be committed.
+
+### Next Development Priorities
+
+1. Prediction-time eligibility and temporal leakage prevention
+2. Improved clinical medication representation
+3. Cohort-wide reproducible LLM experiments
+4. Expansion to alternative MIMIC-IV cohorts and preprocessing methods

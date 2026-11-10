@@ -11,6 +11,7 @@ class LLMResponse:
     text: str
     prompt_tokens: int | None
     completion_tokens: int | None
+    finish_reason: str | None = None
 
 
 class OpenAICompatibleLLM:
@@ -109,6 +110,11 @@ class OpenAICompatibleLLM:
             completion_tokens=(
                 usage.completion_tokens
                 if usage is not None
+                else None
+            ),
+            finish_reason=(
+                result.choices[0].finish_reason
+                if result.choices and result.choices[0] is not None
                 else None
             ),
         )

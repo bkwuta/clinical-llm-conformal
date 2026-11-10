@@ -1,0 +1,28 @@
+# Replace paths with outputs from your preferred cohort/measurement preprocessing.
+# No MIMIC admissions are assumed or hardcoded.
+cohort:
+  path: /data/mimiciv/cohorts/custom_500.parquet
+measurements:
+  provider: generic
+  path: /data/mimiciv/derived/custom_500/measurements.parquet
+  # Optional admission-level file with subject_id, hadm_id, Age, Sex:
+  # demographics_path: /data/mimiciv/derived/custom_500/demographics.parquet
+features:
+  catalog: configs/feature_catalog_example.yaml
+  selected:
+    - Heart Rate
+    - Creatinine
+    - Custom Biomarker
+prompt:
+  provider: generic
+  task: mortality
+  n_shot: 0
+  unit: true
+  reference_range: true
+generation:
+  temperature: 0.0
+  max_tokens: 2048
+  enable_thinking: false
+  reasoning_effort: none
+  top_k: 20
+  min_p: 0.0
