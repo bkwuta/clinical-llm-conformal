@@ -1,0 +1,52 @@
+# Each set partitions the 23 measurements and the three non-measurement domains.
+# Labels in `features` must match the ClinicRealm/extended EHR column names exactly.
+# Both sets start from the identical complete clinical prompt.
+chunk_sets:
+  detailed_15:
+    chunks:
+      Demographics:
+        domains: [demographics]
+      "Hemodynamics (HR/BP)":
+        features: ["Heart Rate", "Diastolic blood pressure", "Mean blood pressure", "Systolic blood pressure"]
+      "Respiratory status":
+        features: ["Fraction inspired oxygen", "Oxygen saturation", "Respiratory rate"]
+      "Neuro status (GCS)":
+        features: ["Glascow coma scale eye opening", "Glascow coma scale motor response", "Glascow coma scale total", "Glascow coma scale verbal response"]
+      Glucose:
+        features: ["Glucose"]
+      "Blood pH":
+        features: ["pH"]
+      "Capillary refill":
+        features: ["Capillary refill rate"]
+      Temperature:
+        features: ["Temperature"]
+      Weight:
+        features: ["Weight"]
+      Height:
+        features: ["Height"]
+      Renal:
+        features: ["Creatinine", "BUN"]
+      Hematology:
+        features: ["WBC", "Hemoglobin", "Platelets"]
+      Lactate:
+        features: ["Lactate"]
+      Diagnoses:
+        domains: [diagnoses]
+      Medications:
+        domains: [medications]
+
+  broad_6:
+    chunks:
+      "Demographics and anthropometrics":
+        domains: [demographics]
+        features: ["Height", "Weight"]
+      "Vital signs":
+        features: ["Heart Rate", "Diastolic blood pressure", "Mean blood pressure", "Systolic blood pressure", "Fraction inspired oxygen", "Oxygen saturation", "Respiratory rate", "Capillary refill rate", "Temperature"]
+      "Neurological status":
+        features: ["Glascow coma scale eye opening", "Glascow coma scale motor response", "Glascow coma scale total", "Glascow coma scale verbal response"]
+      "Laboratory tests":
+        features: ["Glucose", "pH", "Creatinine", "BUN", "Lactate", "WBC", "Hemoglobin", "Platelets"]
+      Diagnoses:
+        domains: [diagnoses]
+      Medications:
+        domains: [medications]
