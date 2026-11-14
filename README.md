@@ -5,21 +5,30 @@ A reproducible research pipeline for evaluating local large language models on s
 ## Current pipeline
 
 ```text
-Local MIMIC-IV structured data
-        ↓
-Pinned PKU-AICare MIMIC-IV preprocessing
-        ↓
-Structured-only ClinicRealm-style 200-admission test split
-        ↓
-ClinicRealm prompt construction
-        ↓
-Local OpenAI-compatible LLM
-        ↓
-Mortality probability parsing
-        ↓
-Clinical-chunk DBSA
-        ↓
-Later: sufficient-subset + conformal analysis
+Authorized MIMIC-IV data (acquisition outside this repository)
+    |
+    +--> Pinned ClinicRealm-style preprocessing --> reference EHR
+    |
+    +--> Alternative preprocessing --> cohort manifest + longitudinal measurements
+    |                                  (CSV/Parquet + feature catalog)
+    +--> Cohort-driven diagnoses and prescription extraction (private utility)
+                       |
+                       v
+            Clinical record adapters
+                       |
+          ClinicRealm / generic prompts
+                       |
+                       v
+          Local OpenAI-compatible LLM
+                       |
+                       v
+           Mortality probability parsing
+                       |
+                       v
+           Configurable clinical-chunk DBSA
+                       |
+                       v
+         Future: temporal validity and conformal analysis
 ```
 
 The current frozen structured-only test cohort contains:
@@ -90,7 +99,6 @@ Example:
 
 ```env
 MIMIC_DATA_DIR=/path/to/mimiciv
-
 LLM_BASE_URL=http://127.0.0.1:11434/v1
 LLM_MODEL=qwen3.8-27b-local
 LLM_API_KEY=local
@@ -126,11 +134,9 @@ Recommended structure:
 
 ```yaml
 seed: 42
-
 data:
   work_root: tmp/clinicrealm_reference
   test_ehr_path: tmp/clinicrealm_reference/processed/clinicrealm_structured_test_200.parquet
-
 reference:
   test_size: 200
 ```
@@ -201,83 +207,38 @@ The response is parsed into a mortality probability.
 
 ## DBSA
 
-DBSA is currently used as a **clinical-chunk sensitivity analysis** over structured EHR prompt components.
+DBSA is a **clinical-chunk sensitivity analysis**: for each chunk it compares sampled mortality probabilities from the full prompt with probabilities from a prompt in which that chunk's information has been removed. The implementation reports an energy-distance estimate and a permutation p-value. It is a clinical adaptation rather than an exact token-level reproduction of the original method.
 
-Clinical chunks include:
-
-- Demographics
-- Hemodynamics (HR/BP)
-- Respiratory status
-- Temperature
-- Neuro status (GCS)
-- Capillary refill
-- Glucose
-- Blood pH
-- Weight
-- Height
-
-DBSA parameters live in:
-
-```text
-configs/dbsa.yaml
-```
-
-Example:
-
-```yaml
-seed: 42
-
-prompt:
-  task: mortality
-  n_shot: 0
-  unit: true
-  reference_range: true
-  format_type: list
-
-generation:
-  temperature: 0.8
-  max_tokens: 128
-  enable_thinking: false
-  reasoning_effort: none
-  top_k: 20
-  min_p: 0.0
-
-dbsa:
-  n_full: 4
-  n_perturbed: 4
-  n_permutations: 500
-  max_workers: 1
-```
-
-The EHR cohort path is **not duplicated in `dbsa.yaml`**. `run_single_dbsa.py` reads the cohort path from `configs/clinicrealm_reference.yaml`.
-
-Run:
+For the original reference DBSA workflow, see `configs/dbsa.yaml` and run:
 
 ```bash
 uv run python scripts/run_single_dbsa.py
 ```
 
-### How the single-patient DBSA smoke test selects a case
+The extended single-admission workflow supports configurable **partition-based** chunk sets in `configs/dbsa_chunks.yaml`:
 
-If `configs/dbsa.yaml` contains a `patient:` block, that exact patient/admission is used.
+- `detailed_15`: 15 groups including individual physiological groups, Renal, Hematology, Lactate, Diagnoses, and Medications.
+- `broad_6`: Demographics and anthropometrics; Vital signs; Neurological status; Laboratory tests; Diagnoses; Medications.
 
-It should **not** be interpreted as representative patient sampling for the final study.
+Both chunk sets operate on the same full clinical prompt and were verified with identical full-prompt SHA-256 for the development admission. The configuration changes which information is removed during each perturbation, not the original patient data or baseline prompt. Each included measurement should appear in exactly one chunk; avoid overlapping assignments.
 
-For a formal DBSA analysis, the intended next step is to define a fixed, reproducible evaluation sample from the 200 admissions, preferably stratified by outcome and selected with a fixed seed.
+**Validate without LLM calls:**
 
-## DBSA interpretation
-
-For each clinical chunk, DBSA compares mortality-probability samples from:
-
-```text
-full prompt
-vs.
-prompt with that chunk removed
+```bash
+uv run python scripts/run_single_dbsa_clinical.py --chunk-set detailed_15 --check-only
+uv run python scripts/run_single_dbsa_clinical.py --chunk-set broad_6 --check-only
 ```
 
-and reports an energy-distance effect plus a permutation p-value.
+**Execute one-admission exploratory DBSA:**
 
-The current implementation is a clinical adaptation of DBSA rather than an exact token-level reproduction. Because smoke tests may use only a small number of model samples, permutation p-values should not be over-interpreted.
+```bash
+uv run python scripts/run_single_dbsa_clinical.py --chunk-set detailed_15
+uv run python scripts/run_single_dbsa_clinical.py --chunk-set broad_6
+```
+
+Outputs are written separately under `tmp/clinical_domains/` as `dbsa_single_detailed_15.json` and `dbsa_single_broad_6.json`. To try your own groups, copy one complete chunk-set definition in `configs/dbsa_chunks.yaml`, rename it, redistribute the existing features, and validate with `--check-only` before inference. New feature names require their measurements to exist in the data and prompt; redefining DBSA groups alone does not extract new features.
+
+The two configurations were exercised on a single admission using two full and two perturbed samples per condition and 200 permutations. **These runs establish integration only**, not stable feature rankings, significant p-values, or clinical validity. Energy distances of differently sized chunks should not be treated as normalized, directly additive importance scores.
 
 ## Low-memory preprocessing
 
@@ -334,7 +295,6 @@ Recommended `.gitignore` coverage:
 
 ```gitignore
 .env
-
 data/
 datasets/
 cache/
@@ -342,7 +302,6 @@ artifacts/
 outputs/
 runs/
 tmp/
-
 *.parquet
 ```
 
@@ -507,18 +466,10 @@ uv run python scripts/run_clinical_domains.py --infer
 **Configuration-driven experiments**
 
 ```bash
-uv run python scripts/run_configured_clinical.py \
-  --config configs/clinicrealm_configured.yaml \
+uv run python scripts/run_configured_clinical.py \\
+  --config configs/clinicrealm_configured.yaml \\
   --limit 2
 ```
-
-**Single-admission DBSA integration**
-
-```bash
-uv run python scripts/run_single_dbsa_clinical.py
-```
-
-The DBSA integration includes 15 perturbation chunks, including diagnoses and medications.
 
 ### Verified Integration
 
@@ -532,7 +483,7 @@ The following checks have passed:
 - Configuration-driven experiment runner
 - Original ClinicRealm prompt compatibility
 - Local Qwen mortality inference with expanded clinical domains
-- Single-admission DBSA integration with 15 clinical chunks
+- Single-admission configurable DBSA integrations with `detailed_15` and `broad_6` chunk sets
 
 These checks establish software integration, not clinical predictive validity.
 
@@ -556,7 +507,7 @@ The current prompt representation may truncate medication lists and should not b
 
 **DBSA interpretation**
 
-The single-admission DBSA run uses reduced sampling settings for integration verification. Its rankings and p-values should not be interpreted as statistically validated clinical feature importance.
+The single-admission configurable DBSA runs use reduced sampling settings for integration verification. Their rankings and p-values should not be interpreted as statistically validated clinical feature importance.
 
 ### Data Privacy
 
